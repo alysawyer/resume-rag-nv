@@ -25,20 +25,31 @@ import os
 
 st.set_page_config(layout = "wide")
 
+# TODO: use this variable or remove it
+job_description = "The user has not inputted a job description."
+
 with st.sidebar:
     DOCS_DIR = os.path.abspath("./uploaded_docs")
     if not os.path.exists(DOCS_DIR):
         os.makedirs(DOCS_DIR)
     st.subheader("Add to the Knowledge Base")
     with st.form("my-form", clear_on_submit=True):
-        uploaded_files = st.file_uploader("Upload a file to the Knowledge Base:", accept_multiple_files = True)
+        # Add text input field
+        user_input = st.text_input("Input Job Description:")
+        
+        uploaded_files = st.file_uploader("Upload Resumes:", accept_multiple_files = True)
         submitted = st.form_submit_button("Upload!")
 
-    if uploaded_files and submitted:
-        for uploaded_file in uploaded_files:
-            st.success(f"File {uploaded_file.name} uploaded successfully!")
-            with open(os.path.join(DOCS_DIR, uploaded_file.name),"wb") as f:
-                f.write(uploaded_file.read())
+    if submitted:
+        if user_input:
+            st.success(f"You entered: {user_input}")
+            job_description = "The job description is " + user_input
+        
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                st.success(f"File {uploaded_file.name} uploaded successfully!")
+                with open(os.path.join(DOCS_DIR, uploaded_file.name),"wb") as f:
+                    f.write(uploaded_file.read())
 
 ############################################
 # Component #2 - Embedding Model and LLM
@@ -113,8 +124,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 prompt_template = ChatPromptTemplate.from_messages(
-    [("system", "You are a helpful AI assistant named Envie. You will reply to questions only based on the context that you are provided. If something is out of context, you will refrain from replying and politely decline to respond to the user."), ("user", "{input}")]
+    [("system", "You are a helpful AI assistant used to rank resumes. Based on the job description the user gives you, return a list of the objective top applicants for the job based on what resumes you have availible. First, evaluate based on the strict requirements then rank based on the soft requirements."), ("user", "{input}")]
 )
+
 user_input = st.chat_input("Can you tell me what NVIDIA is known for?")
 llm = ChatNVIDIA(model="ai-llama3-70b")
 
