@@ -105,30 +105,36 @@ else:
 # Component #4 - LLM Response Generation
 ############################################
 
-st.subheader("Resume Evaluation")
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import LLMChainExtractor
 
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "You are an AI assistant used to rank resumes. Based on the given job description, return a numbered list of the top applicants for the job based on the resumes available. First, evaluate based on the strict requirements then rank based on the soft requirements. Format the output as a numbered list."),
+    ("system", "Based on the given job description, identify the top applicants for the job. Explain your reasoning for the ranking."),
     ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top applicants:")
 ])
 
 job_description = st.text_area("Enter the job description:")
 llm = ChatNVIDIA(model="ai-llama3-70b")
 
-chain = prompt_template | llm | StrOutputParser()
+# Create a reranker
+compressor = LLMChainExtractor.from_llm(llm)
 
 if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
-        retriever = vectorstore.as_retriever()
+        # Create a retriever with reranking
+        base_retriever = vectorstore.as_retriever(search_kwargs={"k": 20})  # Retrieve more documents initially
+        retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
+        
+        # Retrieve and rerank documents
         docs = retriever.invoke(job_description)
         
         context = ""
         for doc in docs:
             context += doc.page_content + "\n\n"
 
+        chain = prompt_template | llm | StrOutputParser()
         augmented_input = {"input": job_description, "context": context}
 
         with st.spinner("Evaluating resumes..."):
