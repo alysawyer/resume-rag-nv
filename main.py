@@ -25,26 +25,18 @@ import os
 
 st.set_page_config(layout = "wide")
 
-# TODO: use this variable or remove it
-job_description = "The user has not inputted a job description."
-
 with st.sidebar:
     DOCS_DIR = os.path.abspath("./uploaded_docs")
     if not os.path.exists(DOCS_DIR):
         os.makedirs(DOCS_DIR)
     st.subheader("Add to the Knowledge Base")
     with st.form("my-form", clear_on_submit=True):
-        # Add text input field
-        user_input = st.text_input("Input Job Description:")
+        # Add text input fiel
         
         uploaded_files = st.file_uploader("Upload Resumes:", accept_multiple_files = True)
         submitted = st.form_submit_button("Upload!")
 
     if submitted:
-        if user_input:
-            st.success(f"You entered: {user_input}")
-            job_description = "The job description is " + user_input
-        
         if uploaded_files:
             for uploaded_file in uploaded_files:
                 st.success(f"File {uploaded_file.name} uploaded successfully!")
@@ -107,50 +99,41 @@ else:
         else:
             st.warning("No documents available to process!", icon="⚠️")
 
+# [Previous imports and setup code remain unchanged]
+
 ############################################
-# Component #4 - LLM Response Generation and Chat
+# Component #4 - LLM Response Generation
 ############################################
 
-st.subheader("Chat with your AI Assistant, Envie!")
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+st.subheader("Resume Evaluation")
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-prompt_template = ChatPromptTemplate.from_messages(
-    [("system", "You are a helpful AI assistant used to rank resumes. Based on the job description the user gives you, return a list of the objective top applicants for the job based on what resumes you have availible. First, evaluate based on the strict requirements then rank based on the soft requirements."), ("user", "{input}")]
-)
+prompt_template = ChatPromptTemplate.from_messages([
+    ("system", "You are an AI assistant used to rank resumes. Based on the given job description, return a numbered list of the top applicants for the job based on the resumes available. First, evaluate based on the strict requirements then rank based on the soft requirements. Format the output as a numbered list."),
+    ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top applicants:")
+])
 
-user_input = st.chat_input("Can you tell me what NVIDIA is known for?")
+job_description = st.text_area("Enter the job description:")
 llm = ChatNVIDIA(model="ai-llama3-70b")
 
 chain = prompt_template | llm | StrOutputParser()
 
-if user_input and vectorstore!=None:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    retriever = vectorstore.as_retriever()
-    docs = retriever.invoke(user_input)
-    with st.chat_message("user"):
-        st.markdown(user_input)
+if st.button("Evaluate Resumes") and vectorstore is not None:
+    if job_description:
+        retriever = vectorstore.as_retriever()
+        docs = retriever.invoke(job_description)
+        
+        context = ""
+        for doc in docs:
+            context += doc.page_content + "\n\n"
 
-    context = ""
-    for doc in docs:
-        context += doc.page_content + "\n\n"
+        augmented_input = {"input": job_description, "context": context}
 
-    augmented_user_input = "Context: " + context + "\n\nQuestion: " + user_input + "\n"
-
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
-
-        for response in chain.stream({"input": augmented_user_input}):
-            full_response += response
-            message_placeholder.markdown(full_response + "▌")
-        message_placeholder.markdown(full_response)
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+        with st.spinner("Evaluating resumes..."):
+            response = chain.invoke(augmented_input)
+            st.markdown("### Top Applicants:")
+            st.markdown(response)
+    else:
+        st.warning("Please enter a job description.")
