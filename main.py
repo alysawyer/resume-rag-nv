@@ -50,9 +50,9 @@ with st.sidebar:
 from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings
 
 # make sure to export your NVIDIA AI Playground key as NVIDIA_API_KEY!
-llm = ChatNVIDIA(model="meta/llama3-70b-instruct")
-document_embedder = NVIDIAEmbeddings(model="NV-Embed-QA", model_type="passage")
-query_embedder = NVIDIAEmbeddings(model="NV-Embed-QA", model_type="query")
+llm = ChatNVIDIA(model="ai-llama3-70b")
+document_embedder = NVIDIAEmbeddings(model="ai-embed-qa-4", model_type="passage")
+query_embedder = NVIDIAEmbeddings(model="ai-embed-qa-4", model_type="query")
 
 ############################################
 # Component #3 - Vector Database Store
@@ -116,7 +116,7 @@ prompt_template = ChatPromptTemplate.from_messages([
 ])
 
 job_description = st.text_area("Enter the job description:")
-llm = ChatNVIDIA(model="meta/llama3-70b-instruct")
+llm = ChatNVIDIA(model="ai-llama3-70b")
 
 # Create a reranker
 compressor = LLMChainExtractor.from_llm(llm)
