@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is a simple standalone implementation showing rag pipeline using Nvidia AI Foundational models.
+# This is a simple standalone implementation showing rag pipeline using Nvidia AI Foundational Models.
 # It uses a simple Streamlit UI and one file implementation of a minimalistic RAG pipeline.
 
 SAMPLE_JOB_DESCRIPTION = """NVIDIA is looking for a senior technical program manager to lead new product introduction for hardware for NVIDIA Infrastructure Specialists (NVIS) team. We want you to collaborate with cross-functional teams, including professional services, solutions architects, development engineers, hardware and software engineering, data center operations, project managers, product managers, and go-to-market strategy teams. We want your primary focus is to ensure NVIS' readiness as NVIDIA introduces new hardware including deployment, provisioning and validation for early customers. You will be working with and have the support of the global NVIS team and in turn supporting the team as delivery transitions to production deployment.
@@ -59,9 +59,7 @@ st.header('Resume Evaluation Assistant 🤖📝', divider='rainbow')
 def local_css(file_name):
     with open(file_name, "r") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
 local_css("style.css")
-
 
 # title and description to the top of the page
 # st.title("Resume Evaluation Assistant")
@@ -70,7 +68,7 @@ This system streamlines that process through leveraging NVIDIA AI Foundational m
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
 Upload resumes, enter a job description, and get AI-based recommendations 
 for top applicants. ''')
-st.warning("This is a proof of concept and should only be used to supplement traditional evaluation methods.")
+st.info("This is a proof of concept and should only be used to supplement traditional evaluation methods.")
 
 
 
@@ -198,8 +196,9 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
             response = chain.invoke(augmented_input)
             st.markdown("### Top Applicants:")
             st.markdown(response)
+            st.balloons()
     else:
         st.warning("Please enter a job description.")
     
 st.markdown("---")
-st.markdown("<div class='footer'>Powered by NVIDIA | © 2024 <a href='https://www.linkedin.com/in/alysawyer/' style='color: #666; text-decoration: none;' class='hover-link'>Alyssa Sawyer</a></div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Powered by <a href='https://ai.nvidia.com/' style='color: #666; text-decoration: none;' class='hover-link'>NVIDIA</a> | © 2024 <a href='https://www.linkedin.com/in/alysawyer/' style='color: #666; text-decoration: none;' class='hover-link'>Alyssa Sawyer</a></div>", unsafe_allow_html=True)
