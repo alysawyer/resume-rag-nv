@@ -53,6 +53,8 @@ st.set_page_config(
     page_icon = "🤖",
     initial_sidebar_state="expanded")
 
+st.header('Resume Evaluation Assistant 🤖📝', divider='rainbow')
+
 # Custom CSS
 def local_css(file_name):
     with open(file_name, "r") as f:
@@ -62,7 +64,7 @@ local_css("style.css")
 
 
 # title and description to the top of the page
-st.title("Resume Evaluation Assistant 📑")
+# st.title("Resume Evaluation Assistant 📑")
 st.markdown('''Job listings currently receive hundreds of resumes. 
 This system streamlines that process through leveraging NVIDIA AI Foundational models to 
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
@@ -90,7 +92,7 @@ with st.sidebar:
     if submitted:
         if uploaded_files:
             for uploaded_file in uploaded_files:
-                st.success(f"File {uploaded_file.name} uploaded successfully!")
+                st.info(f"File {uploaded_file.name} uploaded successfully!")
                 with open(os.path.join(DOCS_DIR, uploaded_file.name),"wb") as f:
                     f.write(uploaded_file.read())
 
@@ -135,7 +137,7 @@ if use_existing_vector_store == "Yes" and vector_store_exists:
     with open(vector_store_path, "rb") as f:
         vectorstore = pickle.load(f)
     with st.sidebar:
-        st.success("Existing vector store loaded successfully.")
+        st.info("Existing vector store loaded successfully.")
 else:
     with st.sidebar:
         if raw_documents:
@@ -149,7 +151,7 @@ else:
             with st.spinner("Saving vector store"):
                 with open(vector_store_path, "wb") as f:
                     pickle.dump(vectorstore, f)
-            st.success("Vector store created and saved.")
+            st.info("Vector store created and saved.")
         else:
             st.warning("No documents available to process!", icon="⚠️")
 
