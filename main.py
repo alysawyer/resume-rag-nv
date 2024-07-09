@@ -32,14 +32,13 @@ st.set_page_config(layout="wide", page_title="Resume Ranker App", page_icon = im
 
 
 # title and description to the top of the page
-st.title("Resume Evaluation System")
+st.title("Resume Evaluation System :memo:")
 st.markdown('''Job listings currently receive hundreds of resumes. 
-            This system streamlines that process through leveraging NVIDIA AI Foundational models to 
-            evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
-            Upload resumes, enter a job description, and get AI-powered recommendations 
-            for top applicants. 
-            This is a proof of concept and is not intended
-            to be used alone, but rather to suppliment traditional evaluation mechanisms.''')
+This system streamlines that process through leveraging NVIDIA AI Foundational models to 
+evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
+Upload resumes, enter a job description, and get AI-powered recommendations 
+for top applicants. ''')
+st.markdown(":orange[This is a proof of concept and is not intended to be used alone, but rather to suppliment traditional evaluation mechanisms.]")
 st.markdown("---") 
 
 with st.sidebar:
@@ -59,6 +58,9 @@ with st.sidebar:
                 st.success(f"File {uploaded_file.name} uploaded successfully!")
                 with open(os.path.join(DOCS_DIR, uploaded_file.name),"wb") as f:
                     f.write(uploaded_file.read())
+
+
+
 
 ############################################
 # Component #2 - Embedding Model and LLM
