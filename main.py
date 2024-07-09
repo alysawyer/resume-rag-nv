@@ -16,6 +16,25 @@
 # This is a simple standalone implementation showing rag pipeline using Nvidia AI Foundational models.
 # It uses a simple Streamlit UI and one file implementation of a minimalistic RAG pipeline.
 
+SAMPLE_JOB_DESCRIPTION = """NVIDIA is looking for a senior technical program manager to lead new product introduction for hardware for NVIDIA Infrastructure Specialists (NVIS) team. We want you to collaborate with cross-functional teams, including professional services, solutions architects, development engineers, hardware and software engineering, data center operations, project managers, product managers, and go-to-market strategy teams. We want your primary focus is to ensure NVIS' readiness as NVIDIA introduces new hardware including deployment, provisioning and validation for early customers. You will be working with and have the support of the global NVIS team and in turn supporting the team as delivery transitions to production deployment.
+What will you be doing:
+	•	Leading end-to-end execution of service programs related to new hardware product introduction and other related programs, ensuring adherence to project timelines, budgets, and quality standards. This includes applying your expertise to drive technical strategy, planning, and execution with the team, partners and customers.
+	•	Developing comprehensive program delivery plans to achieve successful project outcomes, including scoping, resource allocation, task sequencing, and risk management strategies.
+	•	Engaging and building internal and external customer relationships, understanding their needs and expectations, and effectively communicating program status, risks, and mitigation plans to ensure customer satisfaction. This includes engaging executives, engineering teams, and external partners and ensuring visibility and informed decision-making.
+	•	You will work with partners, decomposing requirements into technical execution plans, tracking progress towards goals, and reporting status to customers and technological leadership.
+	•	Establishing and maintaining project metrics and key performance indicators to track progress, evaluate program success, Identify areas for process improvement, and drive initiatives to improve service program.
+What we need to see:
+	•	BS/MS Engineering or Computer Science (or equivalent experience)
+	•	12+ years of experience in project delivery management
+	•	Minimum 5 years of experience in providing field services and/or customer support for hardware & software products
+	•	In-depth knowledge of data center environments, servers, and network equipment
+	•	Strong interpersonal skills and the ability to work directly with customers
+	•	Supreme leadership skills across broad and diverse functional teams
+	•	Strong ability prioritize/multi-task easily with limited supervision
+	•	Experience leading global projects
+NVIDIA is widely considered to be one of the technology world’s most desirable employers. We have some of the most forward-thinking and hardworking people in the world working for us. If you're creative and autonomous, we want to hear from you!
+"""
+
 ############################################
 # Component #0 - UI / Header
 ############################################
@@ -31,7 +50,7 @@ im = Image.open('assets/icon.png')
 st.set_page_config(
     layout="wide",
     page_title="Resume Evaluation Assistant", 
-    page_icon = "📑",
+    page_icon = "🤖",
     initial_sidebar_state="expanded")
 
 # Custom CSS
@@ -150,7 +169,7 @@ prompt_template = ChatPromptTemplate.from_messages([
     ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top applicants, including their names:")
 ])
 
-job_description = st.text_area("Enter the job description:")
+job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
 llm = ChatNVIDIA(model="ai-llama3-70b")
 
 # Create a reranker
