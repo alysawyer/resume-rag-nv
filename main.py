@@ -49,7 +49,7 @@ This system streamlines that process through leveraging NVIDIA AI Foundational m
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
 Upload resumes, enter a job description, and get AI-powered recommendations 
 for top applicants. ''')
-st.warning("This is a proof of concept and should be used to supplement traditional evaluation methods.")
+st.warning("This is a proof of concept and should only be used to supplement traditional evaluation methods.")
 
 
 
@@ -181,4 +181,4 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         st.warning("Please enter a job description.")
     
 st.markdown("---")
-st.markdown("<div class='footer'>Powered by NVIDIA | © 2024 Alyssa Sawyer </div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Powered by NVIDIA | © 2024 <a href='https://www.linkedin.com/in/alysawyer/' style='color: #666; text-decoration: none;' class='hover-link'>Alyssa Sawyer</a></div>", unsafe_allow_html=True)
