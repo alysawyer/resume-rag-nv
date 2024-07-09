@@ -23,13 +23,21 @@
 import streamlit as st
 import os
 
-st.set_page_config(layout = "wide")
+
+st.set_page_config(layout="wide")
+
+# Add title and description to the top of the pagex
+st.title("Resume Evaluation System")
+st.markdown('''Job listings currently receive hundreds of resumes. This system streamlines that 
+process through leveraging NVIDIA AI Foundational models to evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
+Upload resumes, enter a job description, and get AI-powered recommendations for top applicants.''')
+st.markdown("---") 
 
 with st.sidebar:
     DOCS_DIR = os.path.abspath("./uploaded_docs")
     if not os.path.exists(DOCS_DIR):
         os.makedirs(DOCS_DIR)
-    st.subheader("Add to the Knowledge Base")
+    st.subheader("Start by Uploading Applicant Info")
     with st.form("my-form", clear_on_submit=True):
         # Add text input fiel
         
@@ -112,7 +120,7 @@ from langchain.retrievers.document_compressors import LLMChainExtractor
 
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "Based on the given job description, identify the top applicants for the job. Explain your reasoning for the ranking."),
-    ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top applicants:")
+    ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top applicants, including their names:")
 ])
 
 job_description = st.text_area("Enter the job description:")
