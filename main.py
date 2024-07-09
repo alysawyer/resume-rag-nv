@@ -22,15 +22,24 @@
 
 import streamlit as st
 import os
+from PIL import Image
+
+# load icon
+im = Image.open('assets/icon.png')
+
+# page settings and page title 
+st.set_page_config(layout="wide", page_title="Resume Ranker App", page_icon = im)
 
 
-st.set_page_config(layout="wide")
-
-# Add title and description to the top of the pagex
+# title and description to the top of the page
 st.title("Resume Evaluation System")
-st.markdown('''Job listings currently receive hundreds of resumes. This system streamlines that 
-process through leveraging NVIDIA AI Foundational models to evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
-Upload resumes, enter a job description, and get AI-powered recommendations for top applicants.''')
+st.markdown('''Job listings currently receive hundreds of resumes. 
+            This system streamlines that process through leveraging NVIDIA AI Foundational models to 
+            evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
+            Upload resumes, enter a job description, and get AI-powered recommendations 
+            for top applicants. 
+            This is a proof of concept and is not intended
+            to be used alone, but rather to suppliment traditional evaluation mechanisms.''')
 st.markdown("---") 
 
 with st.sidebar:
