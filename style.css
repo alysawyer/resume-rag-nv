@@ -1,0 +1,12 @@
+/* style.css */
+
+.footer {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Custom styling for headers */
+h1, h2, h3 {
+    color: #76b900;
+}

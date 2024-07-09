@@ -17,7 +17,7 @@
 # It uses a simple Streamlit UI and one file implementation of a minimalistic RAG pipeline.
 
 ############################################
-# Component #1 - Document Loader
+# Component #0 - UI / Header
 ############################################
 
 import streamlit as st
@@ -28,27 +28,43 @@ from PIL import Image
 im = Image.open('assets/icon.png')
 
 # page settings and page title 
-st.set_page_config(layout="wide", page_title="Resume Ranker App", page_icon = im)
+st.set_page_config(
+    layout="wide",
+    page_title="Resume Evaluation Assistant", 
+    page_icon = "📑",
+    initial_sidebar_state="expanded")
+
+# Custom CSS
+def local_css(file_name):
+    with open(file_name, "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+local_css("style.css")
 
 
 # title and description to the top of the page
-st.title("Resume Evaluation System :memo:")
+st.title("Resume Evaluation Assistant 📑")
 st.markdown('''Job listings currently receive hundreds of resumes. 
 This system streamlines that process through leveraging NVIDIA AI Foundational models to 
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
 Upload resumes, enter a job description, and get AI-powered recommendations 
 for top applicants. ''')
-st.markdown(":orange[This is a proof of concept and is not intended to be used alone, but rather to suppliment traditional evaluation mechanisms.]")
-st.markdown("---") 
+st.warning("This is a proof of concept and should be used to supplement traditional evaluation methods.")
+
+
+
+############################################
+# Component #1 - Document Loader
+############################################
 
 with st.sidebar:
+    st.subheader("Upload Applicant Information")
+
     DOCS_DIR = os.path.abspath("./uploaded_docs")
     if not os.path.exists(DOCS_DIR):
         os.makedirs(DOCS_DIR)
-    st.subheader("Start by Uploading Applicant Info")
-    with st.form("my-form", clear_on_submit=True):
-        # Add text input fiel
-        
+    
+    with st.form("my-form", clear_on_submit=True):        
         uploaded_files = st.file_uploader("Upload Resumes:", accept_multiple_files = True)
         submitted = st.form_submit_button("Upload!")
 
@@ -142,19 +158,20 @@ compressor = LLMChainExtractor.from_llm(llm)
 
 if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
-        # Create a retriever with reranking
-        base_retriever = vectorstore.as_retriever(search_kwargs={"k": 20})  # Retrieve more documents initially
-        retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
-        
-        # Retrieve and rerank documents
-        docs = retriever.invoke(job_description)
-        
-        context = ""
-        for doc in docs:
-            context += doc.page_content + "\n\n"
+        with st.spinner("Fetching resumes..."):
+            # Create a retriever with reranking
+            base_retriever = vectorstore.as_retriever(search_kwargs={"k": 20})  # Retrieve more documents initially
+            retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
+            
+            # Retrieve and rerank documents
+            docs = retriever.invoke(job_description)
+            
+            context = ""
+            for doc in docs:
+                context += doc.page_content + "\n\n"
 
-        chain = prompt_template | llm | StrOutputParser()
-        augmented_input = {"input": job_description, "context": context}
+            chain = prompt_template | llm | StrOutputParser()
+            augmented_input = {"input": job_description, "context": context}
 
         with st.spinner("Evaluating resumes..."):
             response = chain.invoke(augmented_input)
@@ -162,3 +179,6 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
             st.markdown(response)
     else:
         st.warning("Please enter a job description.")
+    
+st.markdown("---")
+st.markdown("<div class='footer'>Powered by NVIDIA | © 2024 Alyssa Sawyer </div>", unsafe_allow_html=True)
