@@ -1,16 +1,19 @@
 /* style.css */
 
+/* custom footer */
 .footer {
     text-align: center;
     color: #666;
     font-size: 14px;
 }
 
-/* Custom styling for headers */
+/* NVIDIA green for headers */
 h1, h2 {
     color: #76b900;
 }
 
+
+/* add line when hovering over link */
 .hover-link {
     text-decoration: none;
     color: inherit;
@@ -33,7 +36,13 @@ h1, h2 {
     transform: scaleX(1);   
 }
 
+/* Remove default formatting for links */
 a {
-    color: #666; /* Change to your desired color */
-    text-decoration: none; /* Removes the underline */
+    color: #666; 
+    text-decoration: none;
+}
+
+/* Remove streamlit bar */
+header {
+    visibility: hidden;
 }
