@@ -64,11 +64,11 @@ local_css("style.css")
 
 
 # title and description to the top of the page
-# st.title("Resume Evaluation Assistant 📑")
+# st.title("Resume Evaluation Assistant")
 st.markdown('''Job listings currently receive hundreds of resumes. 
 This system streamlines that process through leveraging NVIDIA AI Foundational models to 
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
-Upload resumes, enter a job description, and get AI-powered recommendations 
+Upload resumes, enter a job description, and get AI-based recommendations 
 for top applicants. ''')
 st.warning("This is a proof of concept and should only be used to supplement traditional evaluation methods.")
 
