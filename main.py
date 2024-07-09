@@ -68,7 +68,7 @@ This system streamlines that process through leveraging NVIDIA AI Foundational m
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
 Upload resumes, enter a job description, and get AI-based recommendations 
 for top applicants. ''')
-st.info("This is a proof of concept and should only be used to supplement traditional evaluation methods.")
+st.warning("This is a proof of concept and should only be used to supplement traditional evaluation methods.")
 
 
 
