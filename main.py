@@ -96,7 +96,7 @@ with st.sidebar:
 from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings
 
 # Make sure to export your NVIDIA AI Playground key as NVIDIA_API_KEY!
-llm = ChatNVIDIA(model="ai-llama3-70b")
+llm = ChatNVIDIA(model="ai-llama3-70b", temperature=0)
 document_embedder = NVIDIAEmbeddings(model="ai-embed-qa-4", model_type="passage")
 query_embedder = NVIDIAEmbeddings(model="ai-embed-qa-4", model_type="query")
 
@@ -148,6 +148,8 @@ else:
                 # documents = text_splitter.split_documents(raw_documents)
             documents = raw_documents
             
+            resume_name_map = {}
+
             # Extract names and add as metadata
             with st.spinner("Extracting metadata..."):
                 for doc in documents:
@@ -160,6 +162,7 @@ else:
                     }).strip()
 
                     doc.metadata["candidate_name"] = candidate_name
+                    resume_name_map[candidate_name] = filename
 
             with st.spinner("Adding document chunks to vector database..."):
                 vectorstore = FAISS.from_documents(documents, document_embedder)
@@ -171,6 +174,7 @@ else:
         else:
             st.warning("No documents available to process!", icon="⚠️")
 
+
 ############################################
 # Component #4 - LLM Response Generation
 ############################################
@@ -181,8 +185,8 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "Based on the given job description, identify the top applicants for the job. Explain your reasoning for the ranking."),
-    ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top 5 applicants, including their full names from the metadata and a brief explanation for each:")
+    ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
+    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here are the top candidates:")
 ])
 
 job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
@@ -195,7 +199,7 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
         with st.spinner("Fetching resumes..."):
             # Create a retriever with reranking
-            base_retriever = vectorstore.as_retriever(search_kwargs={"k": 20})  # Retrieve more documents initially
+            base_retriever = vectorstore.as_retriever(search_kwargs={"k": 40})  # Retrieve more documents initially
             retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
             
             # Retrieve and rerank documents
@@ -203,8 +207,8 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
             
             context = ""
             for doc in docs:
-                context += f"Candidate Name: {doc.metadata.get('candidate_name', 'Unknown')}\n"
-                context += doc.page_content + "\n\n"
+                context += f"[CANDIDATE START] Candidate Name: {doc.metadata.get('candidate_name', 'Unknown')}\n"
+                context += doc.page_content + "[CANDIDATE END]\n\n"
                 
 
             chain = prompt_template | llm | StrOutputParser()
