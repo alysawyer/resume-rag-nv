@@ -115,43 +115,66 @@ query_embedder = NVIDIAEmbeddings(model="ai-embed-qa-4", model_type="query")
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.vectorstores import FAISS
+from langchain.schema import Document
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 import pickle
+import os
 
 with st.sidebar:
     # Option for using an existing vector store
     use_existing_vector_store = st.radio("Use existing vector store if available", ["Yes", "No"], horizontal=True)
 
-# Path to the vector store file
-vector_store_path = "vectorstore.pkl"
+# Create a chain for name extraction
+name_extraction_prompt = PromptTemplate(
+    input_variables=["resume_text", "file_name"],
+    template="Only output the full name of the candidate based on their resume. You have access to the file name and the content. It might be clear from the file name, but if not, it should be the only name listed in the content. If the name isn't clear, choose nickname.\n\n Filename of resume: {file_name}\n\n Resume Content: {resume_text}\n\nCandidate name:"
+)
+name_extraction_chain = LLMChain(llm=llm, prompt=name_extraction_prompt)
 
 # Load raw documents from the directory
+DOCS_DIR = os.path.abspath("./uploaded_docs")
 raw_documents = DirectoryLoader(DOCS_DIR).load()
 
-
 # Check for existing vector store file
+vector_store_path = "vectorstore.pkl"
 vector_store_exists = os.path.exists(vector_store_path)
 vectorstore = None
+
 if use_existing_vector_store == "Yes" and vector_store_exists:
     with open(vector_store_path, "rb") as f:
         vectorstore = pickle.load(f)
-    with st.sidebar:
-        st.info("Existing vector store loaded successfully.")
+    print("Existing vector store loaded successfully.")
 else:
-    with st.sidebar:
-        if raw_documents:
-            with st.spinner("Splitting documents into chunks..."):
-                text_splitter = CharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
-                documents = text_splitter.split_documents(raw_documents)
+    if raw_documents:
+        print("Extracting names...")
+        # code to split documents into chunks: 
+        # text_splitter = CharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+        # documents = text_splitter.split_documents(raw_documents)
+        documents = raw_documents
+        
+        # Extract names and add as metadata
+        for doc in documents:
+            filename = os.path.basename(doc.metadata.get('source', ''))
+            resume_content = doc.page_content
 
-            with st.spinner("Adding document chunks to vector database..."):
-                vectorstore = FAISS.from_documents(documents, document_embedder)
+            candidate_name = name_extraction_chain.run({
+                "resume_text": resume_content, 
+                "file_name": filename
+            }).strip()
 
-            with st.spinner("Saving vector store"):
-                with open(vector_store_path, "wb") as f:
-                    pickle.dump(vectorstore, f)
-            st.info("Vector store created and saved.")
-        else:
-            st.warning("No documents available to process!", icon="⚠️")
+            doc.metadata["candidate_name"] = candidate_name
+            print("filename: ", filename, "candidate: ", candidate_name)
+
+        print("Adding document chunks to vector database...")
+        vectorstore = FAISS.from_documents(documents, document_embedder)
+
+        print("Saving vector store...")
+        with open(vector_store_path, "wb") as f:
+            pickle.dump(vectorstore, f)
+        print("Vector store created and saved with candidate names as metadata.")
+    else:
+        print("No documents available to process!")
 
 ############################################
 # Component #4 - LLM Response Generation
@@ -164,7 +187,7 @@ from langchain.retrievers.document_compressors import LLMChainExtractor
 
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "Based on the given job description, identify the top applicants for the job. Explain your reasoning for the ranking."),
-    ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top applicants, including their names:")
+    ("user", "Job Description: {input}\n\nAvailable Resumes:\n{context}\n\nPlease provide a numbered list of the top 5 applicants, including their full names from the metadata and a brief explanation for each:")
 ])
 
 job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
