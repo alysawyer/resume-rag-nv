@@ -68,7 +68,7 @@ This system streamlines that process through leveraging NVIDIA AI Foundational m
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
 Upload resumes, enter a job description, and get AI-based recommendations 
 for top applicants. ''')
-st.warning("This is a proof of concept and should only be used to supplement traditional evaluation methods.")
+st.warning("This is a proof of concept and should only be used to supplement traditional evaluation methods.", icon="⚠️")
 
 
 
@@ -144,37 +144,41 @@ vectorstore = None
 if use_existing_vector_store == "Yes" and vector_store_exists:
     with open(vector_store_path, "rb") as f:
         vectorstore = pickle.load(f)
-    print("Existing vector store loaded successfully.")
+    with st.sidebar:
+        st.info("Existing vector store loaded successfully.")
 else:
-    if raw_documents:
-        print("Extracting names...")
-        # code to split documents into chunks: 
-        # text_splitter = CharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
-        # documents = text_splitter.split_documents(raw_documents)
-        documents = raw_documents
-        
-        # Extract names and add as metadata
-        for doc in documents:
-            filename = os.path.basename(doc.metadata.get('source', ''))
-            resume_content = doc.page_content
+    with st.sidebar:
+        if raw_documents:
+            # To split into multiple chunks: 
+            # with st.spinner("Splitting documents into chunks..."):
+                # code to split documents into chunks: 
+                # text_splitter = CharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+                # documents = text_splitter.split_documents(raw_documents)
+            documents = raw_documents
+            
+            # Extract names and add as metadata
+            with st.spinner("Extracting metadata..."):
+                for doc in documents:
+                    filename = os.path.basename(doc.metadata.get('source', ''))
+                    resume_content = doc.page_content
 
-            candidate_name = name_extraction_chain.run({
-                "resume_text": resume_content, 
-                "file_name": filename
-            }).strip()
+                    candidate_name = name_extraction_chain.run({
+                        "resume_text": resume_content, 
+                        "file_name": filename
+                    }).strip()
 
-            doc.metadata["candidate_name"] = candidate_name
-            print("filename: ", filename, "candidate: ", candidate_name)
+                    doc.metadata["candidate_name"] = candidate_name
+                    print("filename: ", filename, "candidate: ", candidate_name)
 
-        print("Adding document chunks to vector database...")
-        vectorstore = FAISS.from_documents(documents, document_embedder)
+            with st.spinner("Adding document chunks to vector database..."):
+                vectorstore = FAISS.from_documents(documents, document_embedder)
 
-        print("Saving vector store...")
-        with open(vector_store_path, "wb") as f:
-            pickle.dump(vectorstore, f)
-        print("Vector store created and saved with candidate names as metadata.")
-    else:
-        print("No documents available to process!")
+            with st.spinner("Saving vector store"):
+                with open(vector_store_path, "wb") as f:
+                    pickle.dump(vectorstore, f)
+            st.info("Vector store created and saved.")
+        else:
+            st.warning("No documents available to process!", icon="⚠️")
 
 ############################################
 # Component #4 - LLM Response Generation
@@ -219,7 +223,7 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
             st.markdown(response)
             st.balloons()
     else:
-        st.warning("Please enter a job description.")
+        st.warning("Please enter a job description.", icon="⚠️")
     
 st.markdown("---")
 st.markdown("<div class='footer'>Powered by <a href='https://ai.nvidia.com/' style='color: #666; text-decoration: none;' class='hover-link'>NVIDIA</a> | © 2024 <a href='https://www.linkedin.com/in/alysawyer/' style='color: #666; text-decoration: none;' class='hover-link'>Alyssa Sawyer</a></div>", unsafe_allow_html=True)
