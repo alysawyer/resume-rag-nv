@@ -42,13 +42,14 @@ NVIDIA is widely considered to be one of the technology world’s most desirable
 import streamlit as st
 import os
 
-# page settings and page title 
+# Page settings 
 st.set_page_config(
     layout="wide",
     page_title="Resume Evaluation Assistant", 
     page_icon = "🤖",
     initial_sidebar_state="expanded")
 
+# Page title 
 st.header('Resume Evaluation Assistant 🤖📝', divider='rainbow')
 
 # Custom CSS
@@ -57,7 +58,7 @@ def local_css(file_name):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 local_css("style.css")
 
-# title and description to the top of the page
+# Page description 
 # st.title("Resume Evaluation Assistant")
 st.markdown('''Job listings currently receive hundreds of resumes. 
 This system streamlines that process through leveraging NVIDIA AI Foundational models to 
@@ -65,8 +66,6 @@ evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
 Upload resumes, enter a job description, and get AI-based recommendations 
 for top applicants. ''')
 st.warning("This is a proof of concept and should only be used to supplement traditional evaluation methods.", icon="⚠️")
-
-
 
 ############################################
 # Component #1 - Document Loader
@@ -76,6 +75,7 @@ with st.sidebar:
     st.subheader("Upload Applicant Information")
 
     DOCS_DIR = os.path.abspath("./uploaded_docs")
+
     if not os.path.exists(DOCS_DIR):
         os.makedirs(DOCS_DIR)
     
@@ -83,15 +83,11 @@ with st.sidebar:
         uploaded_files = st.file_uploader("Upload Resumes:", accept_multiple_files = True)
         submitted = st.form_submit_button("Upload!")
 
-    if submitted:
-        if uploaded_files:
-            for uploaded_file in uploaded_files:
-                st.info(f"File {uploaded_file.name} uploaded successfully!")
-                with open(os.path.join(DOCS_DIR, uploaded_file.name),"wb") as f:
-                    f.write(uploaded_file.read())
-
-
-
+    if submitted and uploaded_files:
+        for uploaded_file in uploaded_files:
+            st.info(f"File {uploaded_file.name} uploaded successfully!")
+            with open(os.path.join(DOCS_DIR, uploaded_file.name),"wb") as f:
+                f.write(uploaded_file.read())
 
 ############################################
 # Component #2 - Embedding Model and LLM
@@ -99,7 +95,7 @@ with st.sidebar:
 
 from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings
 
-# make sure to export your NVIDIA AI Playground key as NVIDIA_API_KEY!
+# Make sure to export your NVIDIA AI Playground key as NVIDIA_API_KEY!
 llm = ChatNVIDIA(model="ai-llama3-70b")
 document_embedder = NVIDIAEmbeddings(model="ai-embed-qa-4", model_type="passage")
 query_embedder = NVIDIAEmbeddings(model="ai-embed-qa-4", model_type="query")
