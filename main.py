@@ -41,10 +41,6 @@ NVIDIA is widely considered to be one of the technology world’s most desirable
 
 import streamlit as st
 import os
-from PIL import Image
-
-# load icon
-im = Image.open('assets/icon.png')
 
 # page settings and page title 
 st.set_page_config(
