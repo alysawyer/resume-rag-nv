@@ -160,7 +160,6 @@ else:
                     }).strip()
 
                     doc.metadata["candidate_name"] = candidate_name
-                    print("filename: ", filename, "candidate: ", candidate_name)
 
             with st.spinner("Adding document chunks to vector database..."):
                 vectorstore = FAISS.from_documents(documents, document_embedder)
@@ -204,7 +203,9 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
             
             context = ""
             for doc in docs:
+                context += f"Candidate Name: {doc.metadata.get('candidate_name', 'Unknown')}\n"
                 context += doc.page_content + "\n\n"
+                
 
             chain = prompt_template | llm | StrOutputParser()
             augmented_input = {"input": job_description, "context": context}
