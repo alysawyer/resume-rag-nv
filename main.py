@@ -153,8 +153,6 @@ else:
         else:
             st.warning("No documents available to process!", icon="⚠️")
 
-# [Previous imports and setup code remain unchanged]
-
 ############################################
 # Component #4 - LLM Response Generation
 ############################################
