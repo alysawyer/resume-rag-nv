@@ -185,7 +185,7 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
+    ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate."),
     ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here are the top candidates:")
 ])
 
