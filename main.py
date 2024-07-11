@@ -232,8 +232,8 @@ else:
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from streamlit_pdf_viewer import pdf_viewer
-from streamlit_extras.stylable_container import stylable_container
 from docx2pdf import convert
+from streamlit_extras.stylable_container import stylable_container 
 import tempfile
 import os
 import base64
@@ -248,6 +248,16 @@ job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DE
 llm = ChatNVIDIA(model="ai-llama3-70b")
 compressor = LLMChainExtractor.from_llm(llm)
 
+def extract_name(candidate):
+    # Extract candidate name from the evaluation
+    candidate = candidate.split(':')[0].strip()
+    candidate = candidate.replace('*','')
+    candidate = candidate.strip()
+    # Remove any leading numbers and periods that are not part of the name
+    while candidate and not candidate[0].isalpha():
+        candidate = candidate[1:].lstrip()
+    candidate = candidate.rstrip('.')
+    return candidate
 
 if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
@@ -274,56 +284,63 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         candidates = response.split("\n\n")
 
         for candidate in candidates:
-            if candidate:
-                # Extract candidate name from the evaluation
-                stripped_cand_name = candidate.split(':')[0].strip()
-                stripped_cand_name = stripped_cand_name.replace('*','')
-                stripped_cand_name = stripped_cand_name.strip()
-                # Remove any leading numbers and periods that are not part of the name
-                while stripped_cand_name and not stripped_cand_name[0].isalpha():
-                    stripped_cand_name = stripped_cand_name[1:].lstrip()
-                stripped_cand_name = stripped_cand_name.rstrip('.').lower()
+            # Extract candidate name from the evaluation
+            case_correct_name = extract_name(candidate)
+            lower_name = case_correct_name.lower()
 
-                if stripped_cand_name in valid_candidates:
-                    # Create a container for each candidate
-                    with st.container():
-                        # Display candidate evaluation
-                        st.markdown(candidate)
-
-                        if stripped_cand_name in resume_name_map:
-                            print("TOUCH2")
-                            file_name = resume_name_map[stripped_cand_name]
-                            file_path = os.path.join(DOCS_DIR, file_name)
-                            
-                            # Create an expander for the document viewer
-                            with st.expander("View Resume"):
-                                if os.path.exists(file_path):
-                                    # Check if the file is a Word document
-                                    if file_name.lower().endswith(('.doc', '.docx')):
-                                        # Convert Word to PDF
-                                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
-                                            convert(file_path, tmp_pdf.name)
-                                            pdf_path = tmp_pdf.name
-                                    else:
-                                        pdf_path = file_path
-
-                                    # Read and display the PDF
-                                    with open(pdf_path, "rb") as f:
-                                        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-                                    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="600" type="application/pdf"></iframe>'
-                                    st.markdown(pdf_display, unsafe_allow_html=True)
-
-                                    # Clean up temporary file if created
-                                    if file_name.lower().endswith(('.doc', '.docx')):
-                                        os.unlink(pdf_path)
-                                else:
-                                    st.warning("File not found.")
-                        else:
-                            st.info("No resume available for this candidate.")
-                else:
+            # If evaluation is actually a candidate: 
+            if lower_name in valid_candidates:
+                # Create a container for each candidate
+                with stylable_container(
+                    key="container_with_border",
+                    css_styles="""
+                        {
+                            border: 0px solid #ccccd4;
+                            border-radius: 0.75rem;
+                            padding: calc(1em + 2px);
+                            background-color: #f0f2f6
+                        }
+                        """,
+                ):
+                      # with st.container():
+                    # Display candidate evaluation
+                    st.markdown("##### " + case_correct_name)
                     st.markdown(candidate)
-                    
-                st.balloons()
+
+                    if lower_name in resume_name_map:
+                        file_name = resume_name_map[lower_name]
+                        file_path = os.path.join(DOCS_DIR, file_name)
+                        
+                        # Create an expander for the document viewer
+                        with st.expander("View Resume"):
+                            if os.path.exists(file_path):
+                                # Check if the file is a Word document
+                                if file_name.lower().endswith(('.doc', '.docx')):
+                                    # Convert Word to PDF
+                                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
+                                        convert(file_path, tmp_pdf.name)
+                                        pdf_path = tmp_pdf.name
+                                else:
+                                    pdf_path = file_path
+
+                                # Read and display the PDF
+                                with open(pdf_path, "rb") as f:
+                                    base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+                                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="600" type="application/pdf"></iframe>'
+                                st.markdown(pdf_display, unsafe_allow_html=True)
+
+                                # Clean up temporary file if created
+                                if file_name.lower().endswith(('.doc', '.docx')):
+                                    os.unlink(pdf_path)
+                            else:
+                                st.warning("File not found.")
+                    else:
+                        st.info("No resume available for this candidate.")
+
+            else:
+                st.markdown(candidate)
+                
+            st.balloons()
     else:
         st.warning("Please enter a job description.", icon="⚠️")
 

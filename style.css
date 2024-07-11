@@ -8,7 +8,7 @@
 }
 
 /* NVIDIA green for headers */
-h1, h2 {
+h1, h2, h3, h4, h5 {
     color: #76b900;
 }
 
@@ -61,4 +61,13 @@ header {
 
 .custom-column-container .stMarkdown {
     padding-right: 20px;
+}
+
+.streamlit-expanderHeader {
+    background-color: white;
+    color: #76b900; 
+}
+.streamlit-expanderContent {
+    background-color: white;
+    color: black; 
 }
