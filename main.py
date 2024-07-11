@@ -224,10 +224,12 @@ else:
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from streamlit_pdf_viewer import pdf_viewer
+from streamlit_extras.stylable_container import stylable_container
 from docx2pdf import convert
 import tempfile
 import os
 import base64
+import re
 
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
@@ -270,7 +272,7 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                 stripped_cand_name = candidate.split(':')[0].strip()
                 stripped_cand_name = stripped_cand_name.replace('*','')
                 stripped_cand_name = stripped_cand_name.strip()
-                # Remove any leading numbers and periods that are not part of the name
+                stripped_cand_name = stripped_cand_name.rstrip('.')
                 while stripped_cand_name and not stripped_cand_name[0].isalpha():
                     stripped_cand_name = stripped_cand_name[1:].lstrip()
 
@@ -280,9 +282,6 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                         # Display candidate evaluation
                         st.markdown(candidate)
 
-                        # Remove any trailing periods
-                        stripped_cand_name = stripped_cand_name.rstrip('.')
-                        print(stripped_cand_name)
                         if stripped_cand_name in candidate_pdf_map:
                             file_name = candidate_pdf_map[stripped_cand_name]
                             file_path = os.path.join(DOCS_DIR, file_name)
