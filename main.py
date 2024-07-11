@@ -35,23 +35,24 @@ What we need to see:
 NVIDIA is widely considered to be one of the technology world’s most desirable employers. We have some of the most forward-thinking and hardworking people in the world working for us. If you're creative and autonomous, we want to hear from you!
 """
 
-
 ############################################
-# Component #0.1 - Load Profiles
+# Component #0.1 - Startup
 ############################################
 
+# Prevent profile loading bug 
 from langdetect import detect
 from langdetect import DetectorFactory
-from langchain.globals import set_verbose, get_verbose
 
 # Initialize language profiles
 DetectorFactory.seed = 0  # Reproducibility
 try:
     detect("This is a test.")
 except:
-    pass  # Prevents load profiles error
+    pass  # load profiles 
 
-set_verbose(True)
+# Verbose bug
+from langchain.globals import set_verbose, get_verbose
+set_verbose(False)
 
 ############################################
 # Component #0.5 - UI / Header
@@ -202,6 +203,10 @@ else:
                     }).strip()
 
                     doc.metadata["candidate_name"] = candidate_name
+
+                    # standardizing capitalization
+                    candidate_name = candidate_name.lower()
+                    
                     resume_name_map[candidate_name] = filename
 
                     valid_candidates.add(candidate_name)
@@ -243,9 +248,6 @@ job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DE
 llm = ChatNVIDIA(model="ai-llama3-70b")
 compressor = LLMChainExtractor.from_llm(llm)
 
-def strip_name(candidate):
-    stripped_cand_name = re.split(r'[:\\*]', candidate)[0].strip()
-    return re.sub(r'^[^a-zA-Z]+|\\.+$', '', stripped_cand_name)
 
 if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
@@ -254,11 +256,9 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
             retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
             docs = retriever.invoke(job_description)
             context = ""
-            candidate_pdf_map = {}
             for doc in docs:
                 candidate_name = doc.metadata.get('candidate_name', 'Unknown')
                 pdf_filename = os.path.basename(doc.metadata.get('source', ''))
-                candidate_pdf_map[candidate_name] = pdf_filename
                 context += f"[CANDIDATE START] Candidate Name: {candidate_name}\n"
                 context += doc.page_content + "[CANDIDATE END]\n\n"
         
@@ -272,9 +272,9 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         
         # Split the response into individual candidate evaluations
         candidates = response.split("\n\n")
-        
+
         for candidate in candidates:
-            if candidate.strip():
+            if candidate:
                 # Extract candidate name from the evaluation
                 stripped_cand_name = candidate.split(':')[0].strip()
                 stripped_cand_name = stripped_cand_name.replace('*','')
@@ -282,18 +282,17 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                 # Remove any leading numbers and periods that are not part of the name
                 while stripped_cand_name and not stripped_cand_name[0].isalpha():
                     stripped_cand_name = stripped_cand_name[1:].lstrip()
-                stripped_cand_name = stripped_cand_name.rstrip('.')
+                stripped_cand_name = stripped_cand_name.rstrip('.').lower()
 
-
-                print(stripped_cand_name, valid_candidates)
                 if stripped_cand_name in valid_candidates:
                     # Create a container for each candidate
                     with st.container():
                         # Display candidate evaluation
                         st.markdown(candidate)
 
-                        if stripped_cand_name in candidate_pdf_map:
-                            file_name = candidate_pdf_map[stripped_cand_name]
+                        if stripped_cand_name in resume_name_map:
+                            print("TOUCH2")
+                            file_name = resume_name_map[stripped_cand_name]
                             file_path = os.path.join(DOCS_DIR, file_name)
                             
                             # Create an expander for the document viewer
