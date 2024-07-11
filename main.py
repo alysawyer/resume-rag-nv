@@ -42,6 +42,7 @@ NVIDIA is widely considered to be one of the technology world’s most desirable
 
 from langdetect import detect
 from langdetect import DetectorFactory
+from langchain.globals import set_verbose, get_verbose
 
 # Initialize language profiles
 DetectorFactory.seed = 0  # Reproducibility
@@ -49,6 +50,8 @@ try:
     detect("This is a test.")
 except:
     pass  # Prevents load profiles error
+
+set_verbose(True)
 
 ############################################
 # Component #0.5 - UI / Header
@@ -240,6 +243,10 @@ job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DE
 llm = ChatNVIDIA(model="ai-llama3-70b")
 compressor = LLMChainExtractor.from_llm(llm)
 
+def strip_name(candidate):
+    stripped_cand_name = re.split(r'[:\\*]', candidate)[0].strip()
+    return re.sub(r'^[^a-zA-Z]+|\\.+$', '', stripped_cand_name)
+
 if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
         with st.spinner("Fetching resumes..."):
@@ -272,10 +279,13 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                 stripped_cand_name = candidate.split(':')[0].strip()
                 stripped_cand_name = stripped_cand_name.replace('*','')
                 stripped_cand_name = stripped_cand_name.strip()
-                stripped_cand_name = stripped_cand_name.rstrip('.')
+                # Remove any leading numbers and periods that are not part of the name
                 while stripped_cand_name and not stripped_cand_name[0].isalpha():
                     stripped_cand_name = stripped_cand_name[1:].lstrip()
+                stripped_cand_name = stripped_cand_name.rstrip('.')
 
+
+                print(stripped_cand_name, valid_candidates)
                 if stripped_cand_name in valid_candidates:
                     # Create a container for each candidate
                     with st.container():
