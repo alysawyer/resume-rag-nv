@@ -335,8 +335,7 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                             else:
                                 st.warning("File not found.")
                     else:
-                        st.info("No resume available for this candidate.")
-
+                        st.info("No resume available for this candidate. Check if it was deleted and/or the filename was changed")
             else:
                 st.markdown(candidate)
                 
