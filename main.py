@@ -133,9 +133,13 @@ vector_store_path = "vectorstore.pkl"
 vector_store_exists = os.path.exists(vector_store_path)
 vectorstore = None
 
+resume_map_path = "resumemap.pkl"
+
 if use_existing_vector_store == "Yes" and vector_store_exists:
     with open(vector_store_path, "rb") as f:
         vectorstore = pickle.load(f)
+    with open(resume_map_path, "rb") as f:
+        resume_name_map = pickle.load(f)
     with st.sidebar:
         st.info("Existing vector store loaded successfully.")
 else:
@@ -170,6 +174,8 @@ else:
             with st.spinner("Saving vector store"):
                 with open(vector_store_path, "wb") as f:
                     pickle.dump(vectorstore, f)
+                with open(resume_map_path, "wb") as f:
+                    pickle.dump(resume_name_map, f)
             st.info("Vector store created and saved.")
         else:
             st.warning("No documents available to process!", icon="⚠️")
@@ -178,47 +184,91 @@ else:
 ############################################
 # Component #4 - LLM Response Generation
 ############################################
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
+from streamlit_pdf_viewer import pdf_viewer
+import os
 
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate."),
+    ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
     ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here are the top candidates:")
 ])
 
 job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
 llm = ChatNVIDIA(model="ai-llama3-70b")
-
-# Create a reranker
 compressor = LLMChainExtractor.from_llm(llm)
 
 if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
         with st.spinner("Fetching resumes..."):
-            # Create a retriever with reranking
-            base_retriever = vectorstore.as_retriever(search_kwargs={"k": 40})  # Retrieve more documents initially
+            base_retriever = vectorstore.as_retriever(search_kwargs={"k": 40})
             retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
-            
-            # Retrieve and rerank documents
             docs = retriever.invoke(job_description)
-            
             context = ""
+            candidate_pdf_map = {}
             for doc in docs:
-                context += f"[CANDIDATE START] Candidate Name: {doc.metadata.get('candidate_name', 'Unknown')}\n"
+                candidate_name = doc.metadata.get('candidate_name', 'Unknown')
+                pdf_filename = os.path.basename(doc.metadata.get('source', ''))
+                candidate_pdf_map[candidate_name] = pdf_filename
+                context += f"[CANDIDATE START] Candidate Name: {candidate_name}\n"
                 context += doc.page_content + "[CANDIDATE END]\n\n"
-                
-
-            chain = prompt_template | llm | StrOutputParser()
-            augmented_input = {"input": job_description, "context": context}
-
+        
+        chain = prompt_template | llm | StrOutputParser()
+        augmented_input = {"input": job_description, "context": context}
+        
         with st.spinner("Evaluating resumes..."):
             response = chain.invoke(augmented_input)
-            st.markdown("### Top Applicants:")
-            st.markdown(response)
-            st.balloons()
+        
+        st.markdown("### Top Applicants:")
+        
+        # Split the response into individual candidate evaluations
+        candidates = response.split("\n\n")
+        
+        for candidate in candidates:
+            if candidate.strip():
+                # Extract candidate name from the evaluation
+                candidate_name = candidate.split(':')[0].strip()
+                
+                # Create a container for each candidate
+                with st.container():
+                    # Display candidate evaluation
+                    st.markdown(candidate)
+                    
+                    # Check if we have a PDF for this candidate
+
+                    # Getting just the candidate name
+                    stripped_cand_name = candidate_name.replace('*','')
+
+                    # Assuming stripped_cand_name contains one of the given strings
+                    stripped_cand_name = stripped_cand_name.strip()  # Remove leading/trailing whitespace
+
+                    # Remove any leading numbers and periods that are not part of the name
+                    while stripped_cand_name and not stripped_cand_name[0].isalpha():
+                        stripped_cand_name = stripped_cand_name[1:].lstrip()
+
+                    # Remove any trailing periods
+                    stripped_cand_name = stripped_cand_name.rstrip('.')
+
+                    print(stripped_cand_name)
+                    if stripped_cand_name in candidate_pdf_map:
+                        pdf_filename = candidate_pdf_map[stripped_cand_name]
+                        pdf_path = os.path.join(DOCS_DIR, pdf_filename)
+                        
+                        # Create an expander for the PDF viewer
+                        with st.expander("View Resume"):
+                            if os.path.exists(pdf_path):
+                                pdf_viewer(pdf_path, width=700, height=600)
+                            else:
+                                st.warning("PDF file not found.")
+                    else:
+                        st.info("No resume available for this candidate.")
+                
+                # Add a separator between candidates
+                st.markdown("---")
+        
+        st.balloons()
     else:
         st.warning("Please enter a job description.", icon="⚠️")
     
