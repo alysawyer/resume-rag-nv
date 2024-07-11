@@ -266,21 +266,29 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         
         for candidate in candidates:
             if candidate.strip():
+                # Extract candidate name from the evaluation
                 candidate_name = candidate.split(':')[0].strip()
-                stripped_cand_name = candidate_name.replace('*', '').strip()
                 
-                # Remove leading numbers and periods
-                while stripped_cand_name and not stripped_cand_name[0].isalpha():
-                    stripped_cand_name = stripped_cand_name[1:].lstrip()
-                
-                # Remove trailing periods
-                stripped_cand_name = stripped_cand_name.rstrip('.')
-                
-                # Check if this is a valid candidate before displaying resume
-                if stripped_cand_name in valid_candidates:
-                    # Display candidate evaluation and resume as before
+                # Create a container for each candidate
+                with st.container():
+                    # Display candidate evaluation
                     st.markdown(candidate)
                     
+                    # Check if we have a PDF for this candidate
+
+                    # Getting just the candidate name
+                    stripped_cand_name = candidate_name.replace('*','')
+
+                    # Assuming stripped_cand_name contains one of the given strings
+                    stripped_cand_name = stripped_cand_name.strip()  # Remove leading/trailing whitespace
+
+                    # Remove any leading numbers and periods that are not part of the name
+                    while stripped_cand_name and not stripped_cand_name[0].isalpha():
+                        stripped_cand_name = stripped_cand_name[1:].lstrip()
+
+                    # Remove any trailing periods
+                    stripped_cand_name = stripped_cand_name.rstrip('.')
+                    print(stripped_cand_name)
                     if stripped_cand_name in candidate_pdf_map:
                         file_name = candidate_pdf_map[stripped_cand_name]
                         file_path = os.path.join(DOCS_DIR, file_name)
@@ -310,10 +318,8 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                                 st.warning("File not found.")
                     else:
                         st.info("No resume available for this candidate.")
-                else:
-                    st.info(f"Note: '{stripped_cand_name}' is not recognized as a valid candidate.")
-                # Add a separator between candidates
-                st.markdown("---")
+                    # Add a separator between candidates
+                    st.markdown("---")
             
             st.balloons()
         else:
