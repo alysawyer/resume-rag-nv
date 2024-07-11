@@ -267,63 +267,57 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         for candidate in candidates:
             if candidate.strip():
                 # Extract candidate name from the evaluation
-                candidate_name = candidate.split(':')[0].strip()
-                
-                # Create a container for each candidate
-                with st.container():
-                    # Display candidate evaluation
+                stripped_cand_name = candidate.split(':')[0].strip()
+                stripped_cand_name = stripped_cand_name.replace('*','')
+                stripped_cand_name = stripped_cand_name.strip()
+                # Remove any leading numbers and periods that are not part of the name
+                while stripped_cand_name and not stripped_cand_name[0].isalpha():
+                    stripped_cand_name = stripped_cand_name[1:].lstrip()
+
+                if stripped_cand_name in valid_candidates:
+                    # Create a container for each candidate
+                    with st.container():
+                        # Display candidate evaluation
+                        st.markdown(candidate)
+
+                        # Remove any trailing periods
+                        stripped_cand_name = stripped_cand_name.rstrip('.')
+                        print(stripped_cand_name)
+                        if stripped_cand_name in candidate_pdf_map:
+                            file_name = candidate_pdf_map[stripped_cand_name]
+                            file_path = os.path.join(DOCS_DIR, file_name)
+                            
+                            # Create an expander for the document viewer
+                            with st.expander("View Resume"):
+                                if os.path.exists(file_path):
+                                    # Check if the file is a Word document
+                                    if file_name.lower().endswith(('.doc', '.docx')):
+                                        # Convert Word to PDF
+                                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
+                                            convert(file_path, tmp_pdf.name)
+                                            pdf_path = tmp_pdf.name
+                                    else:
+                                        pdf_path = file_path
+
+                                    # Read and display the PDF
+                                    with open(pdf_path, "rb") as f:
+                                        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+                                    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="600" type="application/pdf"></iframe>'
+                                    st.markdown(pdf_display, unsafe_allow_html=True)
+
+                                    # Clean up temporary file if created
+                                    if file_name.lower().endswith(('.doc', '.docx')):
+                                        os.unlink(pdf_path)
+                                else:
+                                    st.warning("File not found.")
+                        else:
+                            st.info("No resume available for this candidate.")
+                else:
                     st.markdown(candidate)
                     
-                    # Check if we have a PDF for this candidate
+                st.balloons()
+    else:
+        st.warning("Please enter a job description.", icon="⚠️")
 
-                    # Getting just the candidate name
-                    stripped_cand_name = candidate_name.replace('*','')
-
-                    # Assuming stripped_cand_name contains one of the given strings
-                    stripped_cand_name = stripped_cand_name.strip()  # Remove leading/trailing whitespace
-
-                    # Remove any leading numbers and periods that are not part of the name
-                    while stripped_cand_name and not stripped_cand_name[0].isalpha():
-                        stripped_cand_name = stripped_cand_name[1:].lstrip()
-
-                    # Remove any trailing periods
-                    stripped_cand_name = stripped_cand_name.rstrip('.')
-                    print(stripped_cand_name)
-                    if stripped_cand_name in candidate_pdf_map:
-                        file_name = candidate_pdf_map[stripped_cand_name]
-                        file_path = os.path.join(DOCS_DIR, file_name)
-                        
-                        # Create an expander for the document viewer
-                        with st.expander("View Resume"):
-                            if os.path.exists(file_path):
-                                # Check if the file is a Word document
-                                if file_name.lower().endswith(('.doc', '.docx')):
-                                    # Convert Word to PDF
-                                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
-                                        convert(file_path, tmp_pdf.name)
-                                        pdf_path = tmp_pdf.name
-                                else:
-                                    pdf_path = file_path
-
-                                # Read and display the PDF
-                                with open(pdf_path, "rb") as f:
-                                    base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-                                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="600" type="application/pdf"></iframe>'
-                                st.markdown(pdf_display, unsafe_allow_html=True)
-
-                                # Clean up temporary file if created
-                                if file_name.lower().endswith(('.doc', '.docx')):
-                                    os.unlink(pdf_path)
-                            else:
-                                st.warning("File not found.")
-                    else:
-                        st.info("No resume available for this candidate.")
-                    # Add a separator between candidates
-                    st.markdown("---")
-            
-            st.balloons()
-        else:
-            st.warning("Please enter a job description.", icon="⚠️")
-    
 st.markdown("---")
 st.markdown("<div class='footer'>Powered by <a href='https://ai.nvidia.com/' style='color: #666; text-decoration: none;' class='hover-link'>NVIDIA</a> | © 2024 <a href='https://www.linkedin.com/in/alysawyer/' style='color: #666; text-decoration: none;' class='hover-link'>Alyssa Sawyer</a></div>", unsafe_allow_html=True)
