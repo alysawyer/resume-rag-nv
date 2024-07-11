@@ -35,8 +35,23 @@ What we need to see:
 NVIDIA is widely considered to be one of the technology world’s most desirable employers. We have some of the most forward-thinking and hardworking people in the world working for us. If you're creative and autonomous, we want to hear from you!
 """
 
+
 ############################################
-# Component #0 - UI / Header
+# Component #0.1 - Load Profiles
+############################################
+
+from langdetect import detect
+from langdetect import DetectorFactory
+
+# Initialize language profiles
+DetectorFactory.seed = 0  # Reproducibility
+try:
+    detect("This is a test.")
+except:
+    pass  # Prevents load profiles error
+
+############################################
+# Component #0.5 - UI / Header
 ############################################
 
 import streamlit as st
@@ -108,8 +123,11 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
-from langchain.chains import LLMChain
+from langchain.schema.runnable import RunnablePassthrough
 from langchain.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
 import pickle
 import os
 
@@ -122,8 +140,16 @@ name_extraction_prompt = PromptTemplate(
     input_variables=["resume_text", "file_name"],
     template="Only output the full name of the candidate based on their resume. You have access to the file name and the content. It might be clear from the file name, but if not, it should be the only name listed in the content. If the name isn't clear, choose nickname.\n\n Filename of resume: {file_name}\n\n Resume Content: {resume_text}\n\nCandidate name:"
 )
-name_extraction_chain = LLMChain(llm=llm, prompt=name_extraction_prompt)
 
+name_extraction_chain = (
+    RunnablePassthrough.assign(
+        resume_text=lambda x: x["resume_text"],
+        file_name=lambda x: x["file_name"]
+    )
+    | name_extraction_prompt
+    | llm
+    | StrOutputParser()
+)
 # Load raw documents from the directory
 DOCS_DIR = os.path.abspath("./uploaded_docs")
 raw_documents = DirectoryLoader(DOCS_DIR).load()
@@ -135,11 +161,15 @@ vectorstore = None
 
 resume_map_path = "resumemap.pkl"
 
+valid_cand_path = "validcand.pkl"
+
 if use_existing_vector_store == "Yes" and vector_store_exists:
     with open(vector_store_path, "rb") as f:
         vectorstore = pickle.load(f)
     with open(resume_map_path, "rb") as f:
         resume_name_map = pickle.load(f)
+    with open(valid_cand_path, "rb") as f:
+        valid_candidates = pickle.load(f)
     with st.sidebar:
         st.info("Existing vector store loaded successfully.")
 else:
@@ -150,6 +180,9 @@ else:
                 # code to split documents into chunks: 
                 # text_splitter = CharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
                 # documents = text_splitter.split_documents(raw_documents)
+
+            valid_candidates = set()
+
             documents = raw_documents
             
             resume_name_map = {}
@@ -160,13 +193,15 @@ else:
                     filename = os.path.basename(doc.metadata.get('source', ''))
                     resume_content = doc.page_content
 
-                    candidate_name = name_extraction_chain.run({
-                        "resume_text": resume_content, 
+                    candidate_name = name_extraction_chain.invoke({
+                        "resume_text": resume_content,
                         "file_name": filename
                     }).strip()
 
                     doc.metadata["candidate_name"] = candidate_name
                     resume_name_map[candidate_name] = filename
+
+                    valid_candidates.add(candidate_name)
 
             with st.spinner("Adding document chunks to vector database..."):
                 vectorstore = FAISS.from_documents(documents, document_embedder)
@@ -176,6 +211,8 @@ else:
                     pickle.dump(vectorstore, f)
                 with open(resume_map_path, "wb") as f:
                     pickle.dump(resume_name_map, f)
+                with open(valid_cand_path, "wb") as f:
+                    pickle.dump(valid_candidates, f)
             st.info("Vector store created and saved.")
         else:
             st.warning("No documents available to process!", icon="⚠️")
@@ -184,16 +221,17 @@ else:
 ############################################
 # Component #4 - LLM Response Generation
 ############################################
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from streamlit_pdf_viewer import pdf_viewer
+from docx2pdf import convert
+import tempfile
 import os
+import base64
 
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
-    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here are the top candidates:")
+    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here is only a list of the top candidates:")
 ])
 
 job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
@@ -228,49 +266,58 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         
         for candidate in candidates:
             if candidate.strip():
-                # Extract candidate name from the evaluation
                 candidate_name = candidate.split(':')[0].strip()
+                stripped_cand_name = candidate_name.replace('*', '').strip()
                 
-                # Create a container for each candidate
-                with st.container():
-                    # Display candidate evaluation
+                # Remove leading numbers and periods
+                while stripped_cand_name and not stripped_cand_name[0].isalpha():
+                    stripped_cand_name = stripped_cand_name[1:].lstrip()
+                
+                # Remove trailing periods
+                stripped_cand_name = stripped_cand_name.rstrip('.')
+                
+                # Check if this is a valid candidate before displaying resume
+                if stripped_cand_name in valid_candidates:
+                    # Display candidate evaluation and resume as before
                     st.markdown(candidate)
                     
-                    # Check if we have a PDF for this candidate
-
-                    # Getting just the candidate name
-                    stripped_cand_name = candidate_name.replace('*','')
-
-                    # Assuming stripped_cand_name contains one of the given strings
-                    stripped_cand_name = stripped_cand_name.strip()  # Remove leading/trailing whitespace
-
-                    # Remove any leading numbers and periods that are not part of the name
-                    while stripped_cand_name and not stripped_cand_name[0].isalpha():
-                        stripped_cand_name = stripped_cand_name[1:].lstrip()
-
-                    # Remove any trailing periods
-                    stripped_cand_name = stripped_cand_name.rstrip('.')
-
-                    print(stripped_cand_name)
                     if stripped_cand_name in candidate_pdf_map:
-                        pdf_filename = candidate_pdf_map[stripped_cand_name]
-                        pdf_path = os.path.join(DOCS_DIR, pdf_filename)
+                        file_name = candidate_pdf_map[stripped_cand_name]
+                        file_path = os.path.join(DOCS_DIR, file_name)
                         
-                        # Create an expander for the PDF viewer
+                        # Create an expander for the document viewer
                         with st.expander("View Resume"):
-                            if os.path.exists(pdf_path):
-                                pdf_viewer(pdf_path, width=700, height=600)
+                            if os.path.exists(file_path):
+                                # Check if the file is a Word document
+                                if file_name.lower().endswith(('.doc', '.docx')):
+                                    # Convert Word to PDF
+                                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
+                                        convert(file_path, tmp_pdf.name)
+                                        pdf_path = tmp_pdf.name
+                                else:
+                                    pdf_path = file_path
+
+                                # Read and display the PDF
+                                with open(pdf_path, "rb") as f:
+                                    base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+                                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="600" type="application/pdf"></iframe>'
+                                st.markdown(pdf_display, unsafe_allow_html=True)
+
+                                # Clean up temporary file if created
+                                if file_name.lower().endswith(('.doc', '.docx')):
+                                    os.unlink(pdf_path)
                             else:
-                                st.warning("PDF file not found.")
+                                st.warning("File not found.")
                     else:
                         st.info("No resume available for this candidate.")
-                
+                else:
+                    st.info(f"Note: '{stripped_cand_name}' is not recognized as a valid candidate.")
                 # Add a separator between candidates
                 st.markdown("---")
-        
-        st.balloons()
-    else:
-        st.warning("Please enter a job description.", icon="⚠️")
+            
+            st.balloons()
+        else:
+            st.warning("Please enter a job description.", icon="⚠️")
     
 st.markdown("---")
 st.markdown("<div class='footer'>Powered by <a href='https://ai.nvidia.com/' style='color: #666; text-decoration: none;' class='hover-link'>NVIDIA</a> | © 2024 <a href='https://www.linkedin.com/in/alysawyer/' style='color: #666; text-decoration: none;' class='hover-link'>Alyssa Sawyer</a></div>", unsafe_allow_html=True)
