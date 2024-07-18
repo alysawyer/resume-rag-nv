@@ -241,7 +241,7 @@ import re
 
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
-    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here is only a list of the top candidates:")
+    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here is only a list of the top 10 candidates:")
 ])
 
 job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
@@ -284,6 +284,7 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         candidates = response.split("\n\n")
 
         for candidate in candidates:
+            print(candidate + " yahoo")
             # Extract candidate name from the evaluation
             case_correct_name = extract_name(candidate)
             lower_name = case_correct_name.lower()
