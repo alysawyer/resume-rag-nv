@@ -35,24 +35,7 @@ What we need to see:
 NVIDIA is widely considered to be one of the technology world’s most desirable employers. We have some of the most forward-thinking and hardworking people in the world working for us. If you're creative and autonomous, we want to hear from you!
 """
 
-############################################
-# Component #0.1 - Startup
-############################################
-
-# Prevent profile loading bug 
-from langdetect import detect
-from langdetect import DetectorFactory
-
-# Initialize language profiles
-DetectorFactory.seed = 0  # Reproducibility
-try:
-    detect("This is a test.")
-except:
-    pass  # load profiles 
-
-# Verbose bug
-from langchain.globals import set_verbose, get_verbose
-set_verbose(False)
+ 
 
 ############################################
 # Component #0.5 - UI / Header
@@ -241,7 +224,7 @@ import re
 
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
-    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here is only a list of the top 10 candidates:")
+    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here is only a list of the top 10 candidates, where each candidate's name is surrounded by \'**\' for markdown:")
 ])
 
 job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
