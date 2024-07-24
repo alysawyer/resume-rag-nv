@@ -234,19 +234,16 @@ llm = ChatNVIDIA(model="ai-llama3-70b")
 compressor = LLMChainExtractor.from_llm(llm)
 
 def extract_name(raw_output):
+    # If the output is a ranked candidate 
     if raw_output[0] in "1234567890":
-        # Extract candidate name from the evaluation
-        print("candidate start")
-        print(raw_output)
+        # Extract candidate information from the model output
         number = str(re.match(r'^\d+', raw_output).group())
         candidate = raw_output.split(':')[0].strip()
         description = raw_output.split(':')[1] if ':' in raw_output else ''
+
+        # Clean up candidate name string
         candidate = candidate.replace('*','')
         candidate = candidate.strip()
-        print(number, description, candidate)
-        print("candidate end \\n")
-
-        # Remove any leading numbers and periods that are not part of the name
         while candidate and not candidate[0].isalpha():
             candidate = candidate[1:].lstrip()
         candidate = candidate.rstrip('.')
