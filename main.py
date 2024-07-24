@@ -125,7 +125,7 @@ with st.sidebar:
 # Create a chain for name extraction
 name_extraction_prompt = PromptTemplate(
     input_variables=["resume_text", "file_name"],
-    template="Only output the full name of the candidate based on their resume. You have access to the file name and the content. It might be clear from the file name, but if not, it should be the only name listed in the content. If the name isn't clear, choose nickname.\n\n Filename of resume: {file_name}\n\n Resume Content: {resume_text}\n\nCandidate name:"
+    template="Only output the full name of the candidate based on their resume. You have access to the file name and the content. It might be clear from the file name, but if not, it should be the only name listed in the content, do not include a nickname. If the name isn't clear, choose nickname. \n\n Filename of resume: Jane (JD) Doe Resume Content: J. D. Doe (Jane) 10 years of experience... Candidate name: Jane Doe \n\n Filename of resume: {file_name}\n\n Resume Content: {resume_text}\n\nCandidate name:"
 )
 
 name_extraction_chain = (
@@ -222,25 +222,39 @@ import os
 import base64
 import re
 
+valid_candidates_list = ', '.join(valid_candidates)
+
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
-    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n\n Here is only a list of the top 10 candidates, where each candidate's name is surrounded by \'**\' for markdown:")
+    ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n Only pick candidates from the following list: " + valid_candidates_list + "\n\nHere is only a numbered list of the top 10 candidates using their names from the previous list. Then, describe briefly and as close to the job description as possible why you ranked the candidate like that: \\n\\n 1. **Jane Doe**: Jane meets the experience requirement and has lots of relevant skills... \\n\\n\\")
 ])
 
 job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DESCRIPTION, height=350)
 llm = ChatNVIDIA(model="ai-llama3-70b")
 compressor = LLMChainExtractor.from_llm(llm)
 
-def extract_name(candidate):
-    # Extract candidate name from the evaluation
-    candidate = candidate.split(':')[0].strip()
-    candidate = candidate.replace('*','')
-    candidate = candidate.strip()
-    # Remove any leading numbers and periods that are not part of the name
-    while candidate and not candidate[0].isalpha():
-        candidate = candidate[1:].lstrip()
-    candidate = candidate.rstrip('.')
-    return candidate
+def extract_name(raw_output):
+    if raw_output[0] in "1234567890":
+        # Extract candidate name from the evaluation
+        print("candidate start")
+        print(raw_output)
+        number = str(re.match(r'^\d+', raw_output).group())
+        candidate = raw_output.split(':')[0].strip()
+        description = raw_output.split(':')[1] if ':' in raw_output else ''
+        candidate = candidate.replace('*','')
+        candidate = candidate.strip()
+        print(number, description, candidate)
+        print("candidate end \\n")
+
+        # Remove any leading numbers and periods that are not part of the name
+        while candidate and not candidate[0].isalpha():
+            candidate = candidate[1:].lstrip()
+        candidate = candidate.rstrip('.')
+    else:
+        number = ""
+        candidate = ""
+        description = ""
+    return number, candidate, description
 
 if st.button("Evaluate Resumes") and vectorstore is not None:
     if job_description:
@@ -264,12 +278,14 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
         st.markdown("### Top Applicants:")
         
         # Split the response into individual candidate evaluations
+        print(response)
         candidates = response.split("\n\n")
+  
 
         for candidate in candidates:
-            print(candidate + " yahoo")
+            print(valid_candidates)
             # Extract candidate name from the evaluation
-            case_correct_name = extract_name(candidate)
+            number, case_correct_name, description = extract_name(candidate)
             lower_name = case_correct_name.lower()
 
             # If evaluation is actually a candidate: 
@@ -288,8 +304,8 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                 ):
                       # with st.container():
                     # Display candidate evaluation
-                    st.markdown("##### " + case_correct_name)
-                    st.markdown(candidate)
+                    st.markdown("##### " + number + ". " + case_correct_name)
+                    st.markdown(description)
 
                     if lower_name in resume_name_map:
                         file_name = resume_name_map[lower_name]
