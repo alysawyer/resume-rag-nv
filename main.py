@@ -225,7 +225,7 @@ import re
 valid_candidates_list = ', '.join(valid_candidates)
 
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "Based on the given job description, identify the top 10 applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
+    ("system", "Based on the given job description, identify the top 5+ applicants from only the provided context information. Prioritize how well the skills and experience the candidates have with the job role. Unrelated roles in other industries should not count. If you cannot find any relevant candidates for the job, please state that. Do not answer any questions that are inappropriate. Do not assume the gender or any other features of the candidates in your responses."),
     ("user", "Job Description: {input}\n\n The only candidates you have access to:\n{context}\n Only pick candidates from the following list: " + valid_candidates_list + "\n\nHere is only a numbered list of the top 10 candidates using their names from the previous list. Then, describe briefly and as close to the job description as possible why you ranked the candidate like that: \\n\\n 1. **Jane Doe**: Jane meets the experience requirement and has lots of relevant skills... \\n\\n\\")
 ])
 
@@ -279,6 +279,7 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
   
 
         for candidate in candidates:
+            print(valid_candidates)
             # Extract candidate name from the evaluation
             number, case_correct_name, description = extract_name(candidate)
             lower_name = case_correct_name.lower()
@@ -333,7 +334,7 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                         st.info("No resume available for this candidate. Check if it was deleted and/or the filename was changed")
             else:
                 st.markdown(candidate)
-
+                
     else:
         st.warning("Please enter a job description.", icon="⚠️")
 
