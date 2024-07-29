@@ -150,6 +150,8 @@ resume_map_path = "resumemap.pkl"
 
 valid_cand_path = "validcand.pkl"
 
+first_doc = False 
+
 if use_existing_vector_store == "Yes" and vector_store_exists:
     with open(vector_store_path, "rb") as f:
         vectorstore = pickle.load(f)
@@ -162,49 +164,67 @@ if use_existing_vector_store == "Yes" and vector_store_exists:
 else:
     with st.sidebar:
         if raw_documents:
-            # To split into multiple chunks: 
-            # with st.spinner("Splitting documents into chunks..."):
-                # code to split documents into chunks: 
-                # text_splitter = CharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
-                # documents = text_splitter.split_documents(raw_documents)
-
             valid_candidates = set()
-
-            documents = raw_documents
-            
+            documents = []
             resume_name_map = {}
-
-            # Extract names and add as metadata
-            with st.spinner("Extracting metadata..."):
+            
+            with st.spinner("Processing documents..."):
+                for doc in raw_documents:
+                    try:
+                        filename = os.path.basename(doc.metadata.get('source', ''))
+                        resume_content = doc.page_content
+                        
+                        # Extract candidate name
+                        candidate_name = name_extraction_chain.invoke({
+                            "resume_text": resume_content,
+                            "file_name": filename
+                        }).strip()
+                        
+                        # Add metadata to document
+                        processed_doc = Document(
+                            page_content=resume_content,
+                            metadata={
+                                "source": doc.metadata.get('source', ''),
+                                "candidate_name": candidate_name
+                            }
+                        )
+                        
+                        # Standardize capitalization for the name map
+                        standardized_name = candidate_name.lower()
+                        resume_name_map[standardized_name] = filename
+                        valid_candidates.add(standardized_name)
+                        
+                        # Add document to the list
+                        documents.append(processed_doc)
+                        
+                    except Exception as e:
+                        st.warning(f"Error processing document {filename}: {str(e)}")
+                        continue
+            
+            with st.spinner("Adding documents to vector database..."):
                 for doc in documents:
-                    filename = os.path.basename(doc.metadata.get('source', ''))
-                    resume_content = doc.page_content
-
-                    candidate_name = name_extraction_chain.invoke({
-                        "resume_text": resume_content,
-                        "file_name": filename
-                    }).strip()
-
-                    doc.metadata["candidate_name"] = candidate_name
-
-                    # standardizing capitalization
-                    candidate_name = candidate_name.lower()
-                    
-                    resume_name_map[candidate_name] = filename
-
-                    valid_candidates.add(candidate_name)
-
-            with st.spinner("Adding document chunks to vector database..."):
-                vectorstore = FAISS.from_documents(documents, document_embedder)
-
-            with st.spinner("Saving vector store"):
-                with open(vector_store_path, "wb") as f:
-                    pickle.dump(vectorstore, f)
-                with open(resume_map_path, "wb") as f:
-                    pickle.dump(resume_name_map, f)
-                with open(valid_cand_path, "wb") as f:
-                    pickle.dump(valid_candidates, f)
-            st.info("Vector store created and saved.")
+                    try:
+                        if first_doc == False:
+                            # Initalize if it is the first document
+                            vectorstore = FAISS.from_documents([doc], document_embedder)  # Initialize empty FAISS index
+                            first_doc = True
+                        else:
+                            vectorstore.add_documents([doc])
+                    except Exception as e:
+                        print("Cannot process " + doc.metadata['candidate_name'] + "'s resume.")
+                        continue
+            
+            with st.spinner("Saving vector store and metadata..."):
+                try:
+                    with open(vector_store_path, "wb") as f:
+                        pickle.dump(vectorstore, f)
+                    with open(resume_map_path, "wb") as f:
+                        pickle.dump(resume_name_map, f)
+                    with open(valid_cand_path, "wb") as f:
+                        pickle.dump(valid_candidates, f)
+                    st.info("Vector store created and saved.")
+                except Exception as e:
+                    st.error(f"Error saving vector store and metadata: {str(e)}")
         else:
             st.warning("No documents available to process!", icon="⚠️")
 
@@ -298,7 +318,6 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
                         }
                         """,
                 ):
-                      # with st.container():
                     # Display candidate evaluation
                     st.markdown("##### " + number + ". " + case_correct_name)
                     st.markdown(description)
