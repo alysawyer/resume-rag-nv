@@ -193,7 +193,7 @@ else:
                         standardized_name = candidate_name.lower()
                         resume_name_map[standardized_name] = filename
                         valid_candidates.add(standardized_name)
-                        
+
                         # Add document to the list
                         documents.append(processed_doc)
                         
@@ -299,7 +299,6 @@ if st.button("Evaluate Resumes") and vectorstore is not None:
   
 
         for candidate in candidates:
-            print(valid_candidates)
             # Extract candidate name from the evaluation
             number, case_correct_name, description = extract_name(candidate)
             lower_name = case_correct_name.lower()
