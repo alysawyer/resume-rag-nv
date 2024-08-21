@@ -2,10 +2,11 @@
 
 RAG web application that will return the best resumes for a given job description. 
 
+## Acknowledgements
+
+ - [Rag in 5 Minutes](https://github.com/NVIDIA/GenerativeAIExamples/tree/4e86d75c813bcc41d4e92e430019053920d08c94/community/5_mins_rag_no_gpu)
 
 ## Deployment
-
-
 
 1. Create a python virtual environment and activate it:
 
@@ -41,16 +42,4 @@ RAG web application that will return the best resumes for a given job descriptio
 
    Then, upload a job description to return a ranking of candidates.
 
-## Authors
-
-- [@alysawyer](https://www.github.com/alysawyer)
-
-
-## Acknowledgements
-
- - [Rag in 5 Minutes](https://github.com/NVIDIA/GenerativeAIExamples/tree/4e86d75c813bcc41d4e92e430019053920d08c94/community/5_mins_rag_no_gpu)
-
-## Demo
-
-Insert gif or link to demo
 
