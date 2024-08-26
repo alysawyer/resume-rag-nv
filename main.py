@@ -35,8 +35,6 @@ What we need to see:
 NVIDIA is widely considered to be one of the technology world’s most desirable employers. We have some of the most forward-thinking and hardworking people in the world working for us. If you're creative and autonomous, we want to hear from you!
 """
 
- 
-
 ############################################
 # Component #0.5 - UI / Header
 ############################################
@@ -61,7 +59,6 @@ def local_css(file_name):
 local_css("style.css")
 
 # Page description 
-# st.title("Resume Evaluation Assistant")
 st.markdown('''Job listings currently receive hundreds of resumes. 
 This system streamlines that process through leveraging NVIDIA AI Foundational models to 
 evaluate resumes via a RAG (Retrieval-Augmented Generation) pipeline.
@@ -78,9 +75,11 @@ with st.sidebar:
 
     DOCS_DIR = os.path.abspath("./uploaded_docs")
 
+    # Make directory to store uploaded documents if needed
     if not os.path.exists(DOCS_DIR):
         os.makedirs(DOCS_DIR)
     
+    # Form to upload user resumes 
     with st.form("my-form", clear_on_submit=True):        
         uploaded_files = st.file_uploader("Upload Resumes:", accept_multiple_files = True)
         submitted = st.form_submit_button("Upload!")
@@ -92,7 +91,7 @@ with st.sidebar:
                 f.write(uploaded_file.read())
 
 ############################################
-# Component #2 - Embedding Model and LLM
+# Component #2 - Initalizing Embedding Model and LLM
 ############################################
 
 from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings
@@ -118,11 +117,12 @@ from langchain_core.prompts import ChatPromptTemplate
 import pickle
 import os
 
+# Option for using an existing vector store
 with st.sidebar:
-    # Option for using an existing vector store
     use_existing_vector_store = st.radio("Use existing vector store if available", ["Yes", "No"], horizontal=True)
 
 # Create a chain for name extraction
+# In the future, this can be used to extract other information about the candidates
 name_extraction_prompt = PromptTemplate(
     input_variables=["resume_text", "file_name"],
     template="Only output the full name of the candidate based on their resume. You have access to the file name and the content. It might be clear from the file name, but if not, it should be the only name listed in the content, do not include a nickname. If the name isn't clear, choose nickname. \n\n Filename of resume: Jane (JD) Doe Resume Content: J. D. Doe (Jane) 10 years of experience... Candidate name: Jane Doe \n\n Filename of resume: {file_name}\n\n Resume Content: {resume_text}\n\nCandidate name:"
@@ -137,6 +137,7 @@ name_extraction_chain = (
     | llm
     | StrOutputParser()
 )
+
 # Load raw documents from the directory
 DOCS_DIR = os.path.abspath("./uploaded_docs")
 raw_documents = DirectoryLoader(DOCS_DIR).load()
@@ -146,8 +147,10 @@ vector_store_path = "vectorstore.pkl"
 vector_store_exists = os.path.exists(vector_store_path)
 vectorstore = None
 
+# Create mapping of resume names
 resume_map_path = "resumemap.pkl"
 
+# Create mapping of valid candidates
 valid_cand_path = "validcand.pkl"
 
 first_doc = False 
@@ -253,6 +256,7 @@ job_description = st.text_area("Enter the job description:", value=SAMPLE_JOB_DE
 llm = ChatNVIDIA(model="ai-llama3-70b",temperature=0)
 compressor = LLMChainExtractor.from_llm(llm)
 
+# Getting the name of a candidate from model output
 def extract_name(raw_output):
     # If the output is a ranked candidate 
     if raw_output[0] in "1234567890":
